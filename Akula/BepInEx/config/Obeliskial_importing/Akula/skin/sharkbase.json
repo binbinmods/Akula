@@ -1,0 +1,15 @@
+{
+    "BaseSkin": true,
+    "PerkLevel": 0,
+    "SkinGO": "skinakula",
+    "SkinID": "sharkbase",
+    "SkinName": "Default",
+    "SkinOrder": 0,
+    "SkinSubclass": "shark",
+    "Sku": "",
+    "SpritePortrait": "akulaPortrait",
+    "SpritePortraitGrande": "akulaPortraitGrande",
+    "SpriteSilueta": "akulaSilueta",
+    "SpriteSiluetaGrande": "akulaSiluetaGrande",
+    "SteamStat": ""
+}
