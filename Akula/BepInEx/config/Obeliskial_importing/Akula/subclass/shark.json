@@ -8,7 +8,7 @@
         "{\n    \"UnitsInDeck\": 2,\n    \"Card\": \"punch\"\n}",
         "{\n    \"UnitsInDeck\": 2,\n    \"Card\": \"flankingstrike\"\n}",
         "{\n    \"UnitsInDeck\": 1,\n    \"Card\": \"cleave\"\n}",
-        "{\n    \"UnitsInDeck\": 1,\n    \"Card\": \"sharksharkbite\"\n}"
+        "{\n    \"UnitsInDeck\": 1,\n    \"Card\": \"sharksharkattack\"\n}"
     ],
     "ChallengePack0": "axman",
     "ChallengePack1": "brawler",
