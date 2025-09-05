@@ -1,9 +1,9 @@
 {
-    "Activation": "",
-    "AuraCurseBonus1": "",
+    "Activation": "None",
+    "AuraCurseBonus1": "Bleed",
     "AuraCurseBonus2": "",
     "AuraCurseBonus3": "",
-    "AuraCurseBonusValue1": 0,
+    "AuraCurseBonusValue1": 2,
     "AuraCurseBonusValue2": 0,
     "AuraCurseBonusValue3": 0,
     "AuraCurseImmune1": "",

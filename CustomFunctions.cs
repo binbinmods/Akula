@@ -9,6 +9,7 @@ using static UnityEngine.Mathf;
 using UnityEngine.TextCore.LowLevel;
 using static Akula.Plugin;
 using System.Collections.ObjectModel;
+using JetBrains.Annotations;
 
 namespace Akula
 {
@@ -1681,6 +1682,32 @@ namespace Akula
                     MatchManager.Instance.CreateLogCardModification(cardData1.InternalId, MatchManager.Instance.GetHero(_character.HeroIndex));
                     break;
                 }
+            }
+
+
+        }
+        public static void Vampirism(ref Character _character, int damageDone, float multiplier, CardData _castedCard)
+        {
+            if (_character == null || _character.GetHp() <= 0)
+                return;
+
+            int heal = Functions.FuncRoundToInt((float)damageDone * multiplier);
+            Enums.CardClass CC = Enums.CardClass.None;
+            if ((UnityEngine.Object)_castedCard != (UnityEngine.Object)null)
+                CC = _castedCard.CardClass;
+            int _hp = _character.HealReceivedFinal(_character.HealWithCharacterBonus(heal, CC));
+            _character.ModifyHp(_hp);
+            CastResolutionForCombatText _cast = new CastResolutionForCombatText();
+            _cast.heal = _hp;
+            if ((UnityEngine.Object)_character.HeroItem != (UnityEngine.Object)null)
+            {
+                _character.HeroItem.ScrollCombatTextDamageNew(_cast);
+            }
+            else
+            {
+                if (!((UnityEngine.Object)_character.NPCItem != (UnityEngine.Object)null))
+                    return;
+                _character.NPCItem.ScrollCombatTextDamageNew(_cast);
             }
         }
 

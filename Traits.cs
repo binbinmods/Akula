@@ -72,26 +72,17 @@ namespace Akula
 
             if (_trait == trait0)
             {
-                // Gain 1 evade at combat start 
+                // Wet on you increases speed by 1 per 2 charges. 
+                // Wet on Enemies prevents Bleed from being prevented or removed unless specified. 
                 LogDebug($"Handling Trait {traitId}: {traitName}");
-                _character.SetAuraTrait(_character, "evade", 1);
             }
 
 
             else if (_trait == trait2a)
             {
                 // trait2a
-                // Evasion +1. 
-                // Evasion on you stacks and increases All Damage by 1 per charge. 
-                // When you play a Defense card, gain 1 Energy and Draw 1. (2 times/turn)
-
-                if (CanIncrementTraitActivations(traitId) && _castedCard.HasCardType(Enums.CardType.Defense))// && MatchManager.Instance.energyJustWastedByHero > 0)
-                {
-                    LogDebug($"Handling Trait {traitId}: {traitName}");
-                    _character?.ModifyEnergy(1);
-                    DrawCards(1);
-                    IncrementTraitActivations(traitId);
-                }
+                // Block +1 for every 3 Wet on you. 
+                // Speed +1 for every 15 Bleed on enemies.
             }
 
 
@@ -99,7 +90,7 @@ namespace Akula
             else if (_trait == trait2b)
             {
                 // trait2b:
-                // Stealth on heroes increases All Damage by an additional 15% per charge and All Resistances by an additional 5% per charge.",
+                // Single hit and Special cards do 50% bonus damage for every energy spent.
                 LogDebug($"Handling Trait {traitId}: {traitName}");
 
             }
@@ -107,16 +98,23 @@ namespace Akula
             else if (_trait == trait4a)
             {
                 // trait 4a;
-                // Evasion on you can't be purged unless specified. 
-                // Stealth grants 25% additional damage per charge.",
-
-                LogDebug($"Handling Trait {traitId}: {traitName}");
+                // when you play a Defense, reduce your highest cost card by 2 until discarded(3 uses)
+                if (CanIncrementTraitActivations(traitId) && _castedCard.HasCardType(Enums.CardType.Defense))// && MatchManager.Instance.energyJustWastedByHero > 0)
+                {
+                    LogDebug($"Handling Trait {traitId}: {traitName}");
+                    CardData highestCostCard = GetRandomHighestCostCard(Enums.CardType.None, heroHand);
+                    ReduceCardCost(ref highestCostCard, amountToReduce: 2, isPermanent: false);
+                    IncrementTraitActivations(traitId);
+                }
             }
 
             else if (_trait == trait4b)
             {
                 // trait 4b:
-                // Heroes Only lose 75% stealth charges rounding down when acting in stealth.
+                // Heal yourself for 30% of damage done. 
+                // All Damage for all heroes is increased by 1% per Speed. 
+                // Your damage is increased by 2% per Speed instead.
+                Vampirism(ref _character, _auxInt, 0.3f, _castedCard);
                 LogDebug($"Handling Trait {traitId}: {traitName}");
             }
 
@@ -142,6 +140,85 @@ namespace Akula
             return true;
         }
 
+        // [HarmonyPostfix]
+        // [HarmonyPatch(typeof(Character), "GetTraitDamagePercentModifiers")]
+        // public static void GetTraitDamagePercentModifiersPostfix(Enums.DamageType DamageType, ref bool ___useCache, ref float __result, Character __instance, CardData ___cardCasted)
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(Character), "GetTraitDamagePercentModifiers")]
+        public static void GetTraitDamagePercentModifiersPostfix(Enums.DamageType DamageType, int energyCost, ref float[] __result, Character __instance, CardData ___cardCasted)
+        {
+            // ___useCache = false;
+            if (AtOManager.Instance.TeamHaveTrait(trait4b))
+            {
+                if (IsLivingHero(__instance) && __instance.HaveTrait(trait4b))
+                {
+                    int speed = __instance.Speed;
+                    __result[1] += 2f * speed;
+                }
+                else if (IsLivingHero(__instance))
+                {
+                    int speed = __instance.Speed;
+                    __result[1] += 1f * speed;
+                }
+            }
+            if (IsLivingHero(__instance) && __instance.HaveTrait(trait2a))
+            {
+                if (___cardCasted == null || MatchManager.Instance == null)
+                {
+                    return;
+                }
+                // Single hit and Special cards do 50% bonus damage for every energy spent.
+                bool isSingleHit = ___cardCasted != null && ___cardCasted.EffectRepeat <= 1 && ___cardCasted.TargetType == Enums.CardTargetType.Single;
+                if (isSingleHit || ___cardCasted.CardClass == Enums.CardClass.Special)
+                {
+                    // int energy = MatchManager.Instance.energyJustWastedByHero;
+                    // __result[1] += 50f * energy;
+                    __result[1] += 50f * energyCost;
+                }
+
+
+
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(Character), "GetAuraCurseQuantityModification")]
+        public static void GetAuraCurseQuantityModificationPostfix(string id, Enums.CardClass CC, ref int __result, Character __instance)
+        {
+            if (__instance == null || __instance.HaveTrait(trait2a) == false || MatchManager.Instance == null)
+            {
+                return;
+            }
+
+            LogDebug("GetAuraCurseQuantityModificationPostfix - handing trait2a");
+            switch (id)
+            {
+                case "wet":
+                    // Block +1 for every 3 Wet on you. 
+                    int wetCharges = __instance.GetAuraCharges("wet");
+                    int blockBonus = wetCharges / 3;
+                    __result += blockBonus;
+                    LogDebug($"GetAuraCurseQuantityModificationPostfix - trait2a - wetCharges {wetCharges} blockBonus {blockBonus} new __result {__result}");
+                    break;
+                case "bleed":
+                    // Speed +1 for every 15 Bleed on enemies.
+
+                    // int bleedCharges = 0;
+                    // foreach (Character enemy in MatchManager.Instance.GetTeamNPC())
+                    // {
+                    //     bleedCharges += enemy.GetAuraCharges("bleed");
+                    // }
+                    int bleedCharges = MatchManager.Instance.GetTeamNPC().Sum(enemy => enemy.GetAuraCharges("bleed"));
+                    int speedBonus = bleedCharges / 15;
+                    __result += speedBonus;
+                    LogDebug($"GetAuraCurseQuantityModificationPostfix - trait2a - bleedCharges {bleedCharges} speedBonus {speedBonus} new __result {__result}");
+
+                    break;
+            }
+
+        }
+
 
 
         [HarmonyPostfix]
@@ -155,28 +232,20 @@ namespace Akula
             string traitOfInterest;
             switch (_acId)
             {
-                // trait2a:
-                // Evasion on you stacks and increases All Damage by 1 per charge. 
+                // trait0:
+                // Wet on you increases speed by 1 per 2 charges. 
+                // Wet on Enemies prevents Bleed from being prevented or removed unless specified. 
 
-                // trait2b:
-                // Stealth on heroes increases All Damage by an additional 15% per charge and All Resistances by an additional 5% per charge.",
+                // trait2a
+                // Block +1 for every 3 Wet on you. Speed +1 for every 15 Bleed on enemies.
 
-                // trait 4a;
-                // Evasion on you can't be purged unless specified. 
-                // Stealth grants 25% additional damage per charge.",
-
-                // trait 4b:
-                // Heroes Only lose 75% stealth charges rounding down when acting in stealth.
-
-                case "evasion":
-                    traitOfInterest = trait2a;
+                case "wet":
+                    traitOfInterest = trait0;
                     if (IfCharacterHas(characterOfInterest, CharacterHas.Trait, traitOfInterest, AppliesTo.ThisHero))
                     {
-                        __result.GainCharges = true;
-                        __result.AuraDamageType = Enums.DamageType.All;
-                        float multiplierAmount = 1.0f;  //characterOfInterest.HaveTrait(trait4a) ? 0.3f : 0.2f;
-                        __result.AuraDamageIncreasedPerStack = multiplierAmount;
-                        // __result.HealDoneTotal = Mathf.RoundToInt(multiplierAmount * characterOfInterest.GetAuraCharges("shield"));
+                        __result.CharacterStatModified = Enums.CharacterStat.Speed;
+                        __result.CharacterStatModifiedValuePerStack = 1;
+                        __result.CharacterStatChargesMultiplierNeededForOne = 2;
                     }
                     traitOfInterest = trait4a;
                     if (IfCharacterHas(characterOfInterest, CharacterHas.Trait, traitOfInterest, AppliesTo.ThisHero))
@@ -184,14 +253,12 @@ namespace Akula
                         __result.Removable = false;
                     }
                     break;
-                case "stealth":
-                    traitOfInterest = trait2b;
-                    if (IfCharacterHas(characterOfInterest, CharacterHas.Trait, traitOfInterest, AppliesTo.Heroes))
+                case "bleed":
+                    traitOfInterest = trait0;
+                    if (IfCharacterHas(characterOfInterest, CharacterHas.Trait, traitOfInterest, AppliesTo.Monsters) && characterOfInterest.HasEffect("wet"))
                     {
-                        __result.ResistModified = Enums.DamageType.All;
-                        __result.ResistModifiedPercentagePerStack += 5;
-                        __result.AuraDamageType = Enums.DamageType.All;
-                        __result.AuraDamageIncreasedPercentPerStack += 15;
+                        __result.Preventable = false;
+                        __result.Removable = false;
                     }
                     break;
             }

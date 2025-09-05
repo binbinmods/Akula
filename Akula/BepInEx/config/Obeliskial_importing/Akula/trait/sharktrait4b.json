@@ -1,5 +1,5 @@
 {
-    "Activation": "",
+    "Activation": "Damage",
     "AuraCurseBonus1": "",
     "AuraCurseBonus2": "",
     "AuraCurseBonus3": "",
@@ -23,7 +23,7 @@
     "DamageBonusPercentValue": 0.0,
     "DamageBonusPercentValue2": 0.0,
     "DamageBonusPercentValue3": 0.0,
-    "Description": "30% Lifesteal. All Damage for all heroes is increased by 1% per Speed. Your damage is increased by 2% per Speed instead.",
+    "Description": "Heal yourself for 30% of damage done. All Damage for all heroes is increased by 1% per Speed. Your damage is increased by 2% per Speed instead.",
     "HealFlatBonus": 0,
     "HealPercentBonus": 0.0,
     "HealReceivedFlatBonus": 0,
